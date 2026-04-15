@@ -14,7 +14,7 @@ const emptyForm = {
   confirmPassword: '',
 }
 
-const storageKey = 'full-django-auth-session'
+const storageKey = 'login-session'
 
 function readStoredSession() {
   const storedSession = localStorage.getItem(storageKey)
@@ -47,8 +47,6 @@ function App() {
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isBooting, setIsBooting] = useState(true)
-
-  const usernamePreview = form.username.trim().toLowerCase() || 'new-member'
 
   const hydrateSession = useEffectEvent(async (storedSession) => {
     let activeAccessToken = storedSession.access
@@ -232,38 +230,16 @@ function App() {
 
   return (
     <main className="shell">
-      <section className="hero-panel">
-        <p className="eyebrow">React + Django JWT</p>
-        <h1>Build a clean auth flow without leaving this repo.</h1>
-        <p className="hero-copy">
-          Register a new account, sign in, persist tokens in the browser, and test a
-          protected Django endpoint from the same screen.
-        </p>
-
-        <div className="hero-grid">
-          <article className="highlight-card">
-            <span className="highlight-label">Frontend</span>
-            <strong>Vite React app</strong>
-            <p>Fast local dev with a single-page auth experience.</p>
-          </article>
-          <article className="highlight-card">
-            <span className="highlight-label">Backend</span>
-            <strong>Django + JWT</strong>
-            <p>Register, obtain tokens, refresh them, and fetch protected data.</p>
-          </article>
-        </div>
-
-        <div className="identity-preview">
-          <span className="identity-label">Preview handle</span>
-          <code>@{usernamePreview}</code>
-        </div>
-      </section>
-
       <section className="auth-panel">
         <div className="panel-header">
           <div>
-            <p className="eyebrow">Access</p>
-            <h2>{session ? 'Authenticated session' : 'Create account or sign in'}</h2>
+            <p className="eyebrow">Account</p>
+            <h2>{session ? 'You are signed in' : 'Login or sign up'}</h2>
+            {!session && (
+              <p className="panel-copy">
+                Create a user or log in with your existing account.
+              </p>
+            )}
           </div>
 
           {!session && (
@@ -302,13 +278,13 @@ function App() {
             <article className="state-card">
               <p className="state-kicker">User</p>
               <strong>{session.user?.username}</strong>
-              <span>Authenticated with Django JWT.</span>
+              <span>You are logged in successfully.</span>
             </article>
 
             <article className="state-card accent">
-              <p className="state-kicker">Protected endpoint</p>
-              <strong>{secretMessage || 'No protected message loaded yet.'}</strong>
-              <span>The `/api/secret/` endpoint confirmed your access token.</span>
+              <p className="state-kicker">Status</p>
+              <strong>{secretMessage || 'Your account is active.'}</strong>
+              <span>Your login token is working.</span>
             </article>
 
             <div className="action-row">
@@ -328,7 +304,7 @@ function App() {
                 autoComplete="username"
                 name="username"
                 onChange={updateField}
-                placeholder="mucco2635"
+                placeholder="John doe"
                 required
                 value={form.username}
               />
