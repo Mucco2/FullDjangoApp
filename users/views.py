@@ -1,23 +1,39 @@
-from django.contrib.auth.models import User
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from .serializers import RegisterSerializer, UserSerializer
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def secret_view(request):
-    return Response({"message": "Du er logget ind 🔐"})
+    return Response(
+        {
+            'message': 'You are logged in.',
+            'username': request.user.username,
+        }
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me_view(request):
+    return Response(UserSerializer(request.user).data)
 
 
 @api_view(['POST'])
 def register_view(request):
-    username = request.data.get("username")
-    password = request.data.get("password")
+    serializer = RegisterSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
 
-    if User.objects.filter(username=username).exists():
-        return Response({"error": "User exists"}, status=400)
+    user = serializer.save()
 
-    User.objects.create_user(username=username, password=password)
-
-    return Response({"message": "User created"})
+    return Response(
+        {
+            'message': 'User created successfully.',
+            'user': UserSerializer(user).data,
+        },
+        status=status.HTTP_201_CREATED,
+    )
