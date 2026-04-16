@@ -2,21 +2,38 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from .models import Profile
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['bio', 'avatar_url', 'email_verified', 'created_at', 'updated_at']
+        read_only_fields = ['email_verified', 'created_at', 'updated_at']
+
 
 class UserSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer(read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username']
+        fields = ['id', 'username', 'email', 'profile']
 
 
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=8)
     confirm_password = serializers.CharField(write_only=True)
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError('User already exists.')
+            raise serializers.ValidationError('Username already taken.')
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError('An account with this email already exists.')
         return value
 
     def validate(self, attrs):
@@ -41,7 +58,7 @@ class ChangeUsernameSerializer(serializers.Serializer):
             raise serializers.ValidationError('Choose a different username.')
 
         if User.objects.exclude(pk=user.pk).filter(username=value).exists():
-            raise serializers.ValidationError('User already exists.')
+            raise serializers.ValidationError('Username already taken.')
 
         return value
 
@@ -86,3 +103,31 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['new_password'])
         user.save(update_fields=['password'])
         return user
+
+
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['bio', 'avatar_url']
+
+
+class RequestPasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        # We don't raise an error if the email doesn't exist — that would leak info.
+        return value
+
+
+class ConfirmPasswordResetSerializer(serializers.Serializer):
+    token = serializers.UUIDField()
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError(
+                {'confirm_password': 'Passwords do not match.'}
+            )
+        validate_password(attrs['new_password'])
+        return attrs

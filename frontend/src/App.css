@@ -273,6 +273,54 @@
   filter: saturate(1.06) brightness(1.04);
 }
 
+.link-button {
+  appearance: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #2155d6 !important;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600 !important;
+  padding: 0.3rem !important;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  color: #14213d !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-left: 0.25rem;
+}
+
+.badge-success {
+  background: rgba(70, 217, 161, 0.2);
+  color: #154a3d;
+  border: 1px solid rgba(70, 217, 161, 0.4);
+}
+
+.badge-warning {
+  background: rgba(237, 125, 49, 0.18);
+  color: #7a3d0e;
+  border: 1px solid rgba(237, 125, 49, 0.4);
+}
+
+.avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(20, 33, 61, 0.12);
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;

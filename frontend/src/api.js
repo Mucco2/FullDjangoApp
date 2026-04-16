@@ -111,3 +111,31 @@ export function deleteAccount(accessToken) {
     },
   })
 }
+
+export function updateProfile(accessToken, payload) {
+  return request('/api/account/profile/', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function requestPasswordReset(email) {
+  return request('/api/password-reset/request/', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function confirmPasswordReset(payload) {
+  return request('/api/password-reset/confirm/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function verifyEmail(token) {
+  return request(`/api/verify-email/${token}/`)
+}

@@ -1,18 +1,23 @@
-import { startTransition, useEffect, useEffectEvent, useState } from 'react'
+import { startTransition, useEffect, useEffectEvent, useRef, useState } from 'react'
 import './App.css'
 import {
   changePassword,
+  confirmPasswordReset,
   deleteAccount,
   fetchCurrentUser,
   fetchSecret,
   loginUser,
   refreshAccessToken,
   registerUser,
+  requestPasswordReset,
+  updateProfile,
   updateUsername,
+  verifyEmail,
 } from './api'
 
 const emptyForm = {
   username: '',
+  email: '',
   password: '',
   confirmPassword: '',
 }
@@ -23,6 +28,16 @@ const emptyUsernameForm = {
 
 const emptyPasswordForm = {
   currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+}
+
+const emptyProfileForm = {
+  bio: '',
+  avatar_url: '',
+}
+
+const emptyResetForm = {
   newPassword: '',
   confirmPassword: '',
 }
@@ -57,9 +72,188 @@ function clearStoredSession() {
   localStorage.removeItem(storageKey)
 }
 
+// Detect the current route from the URL.
+// Returns { name: 'reset' | 'verify' | 'default', token?: string }
+function detectRoute() {
+  const path = window.location.pathname
+  const resetMatch = path.match(/^\/reset-password\/([^/]+)\/?$/)
+  if (resetMatch) {
+    return { name: 'reset', token: resetMatch[1] }
+  }
+  const verifyMatch = path.match(/^\/verify-email\/([^/]+)\/?$/)
+  if (verifyMatch) {
+    return { name: 'verify', token: verifyMatch[1] }
+  }
+  return { name: 'default' }
+}
+
+function navigateHome() {
+  window.history.replaceState({}, '', '/')
+}
+
 function App() {
-  const [mode, setMode] = useState('login')
+  const [route, setRoute] = useState(detectRoute)
+
+  if (route.name === 'reset') {
+    return <ResetPasswordPage token={route.token} onDone={() => {
+      navigateHome()
+      setRoute({ name: 'default' })
+    }} />
+  }
+
+  if (route.name === 'verify') {
+    return <VerifyEmailPage token={route.token} onDone={() => {
+      navigateHome()
+      setRoute({ name: 'default' })
+    }} />
+  }
+
+  return <MainApp />
+}
+
+function VerifyEmailPage({ token, onDone }) {
+  const [status, setStatus] = useState('verifying')
+  const [message, setMessage] = useState('Verifying your email address...')
+  const hasVerified = useRef(false)
+
+  useEffect(() => {
+    // Guard against React StrictMode firing this effect twice in dev —
+    // the token is single-use, so the second call would hit a deleted record.
+    if (hasVerified.current) return
+    hasVerified.current = true
+
+    verifyEmail(token)
+      .then((response) => {
+        setStatus('success')
+        setMessage(response.message || 'Email verified.')
+      })
+      .catch((error) => {
+        setStatus('error')
+        setMessage(error.message)
+      })
+  }, [token])
+
+  return (
+    <main className="shell">
+      <section className="auth-panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Email verification</p>
+            <h2>
+              {status === 'verifying' && 'Verifying...'}
+              {status === 'success' && 'Email verified'}
+              {status === 'error' && 'Verification failed'}
+            </h2>
+            <p className="panel-copy">{message}</p>
+          </div>
+        </div>
+        {status !== 'verifying' && (
+          <div className="action-row">
+            <button type="button" onClick={onDone}>
+              Go to login
+            </button>
+          </div>
+        )}
+      </section>
+    </main>
+  )
+}
+
+function ResetPasswordPage({ token, onDone }) {
+  const [form, setForm] = useState(emptyResetForm)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [notice, setNotice] = useState(emptyNotice)
+  const [done, setDone] = useState(false)
+
+  const updateField = (event) => {
+    const { name, value } = event.target
+    setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setIsSubmitting(true)
+    setNotice(emptyNotice)
+
+    try {
+      const response = await confirmPasswordReset({
+        token,
+        new_password: form.newPassword,
+        confirm_password: form.confirmPassword,
+      })
+      setNotice({ tone: 'success', message: response.message })
+      setDone(true)
+    } catch (error) {
+      setNotice({ tone: 'error', message: error.message })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <main className="shell">
+      <section className="auth-panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Password reset</p>
+            <h2>Choose a new password</h2>
+            <p className="panel-copy">
+              Enter a new password for your account.
+            </p>
+          </div>
+        </div>
+
+        {notice.message && (
+          <div className={`form-notice ${notice.tone}`}>{notice.message}</div>
+        )}
+
+        {!done ? (
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <label>
+              New password
+              <input
+                autoComplete="new-password"
+                minLength="8"
+                name="newPassword"
+                onChange={updateField}
+                placeholder="Minimum 8 characters"
+                required
+                type="password"
+                value={form.newPassword}
+              />
+            </label>
+            <label>
+              Confirm new password
+              <input
+                autoComplete="new-password"
+                minLength="8"
+                name="confirmPassword"
+                onChange={updateField}
+                required
+                type="password"
+                value={form.confirmPassword}
+              />
+            </label>
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Reset password'}
+            </button>
+          </form>
+        ) : (
+          <div className="action-row">
+            <button type="button" onClick={onDone}>
+              Go to login
+            </button>
+          </div>
+        )}
+      </section>
+    </main>
+  )
+}
+
+function MainApp() {
+  const [mode, setMode] = useState('login') // 'login' | 'register' | 'forgot'
   const [form, setForm] = useState(emptyForm)
+  const [forgotEmail, setForgotEmail] = useState('')
   const [session, setSession] = useState(null)
   const [secretMessage, setSecretMessage] = useState('')
   const [status, setStatus] = useState('')
@@ -67,11 +261,14 @@ function App() {
   const [isBooting, setIsBooting] = useState(true)
   const [usernameForm, setUsernameForm] = useState(emptyUsernameForm)
   const [passwordForm, setPasswordForm] = useState(emptyPasswordForm)
+  const [profileForm, setProfileForm] = useState(emptyProfileForm)
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [usernameNotice, setUsernameNotice] = useState(emptyNotice)
   const [passwordNotice, setPasswordNotice] = useState(emptyNotice)
+  const [profileNotice, setProfileNotice] = useState(emptyNotice)
 
   const hydrateSession = useEffectEvent(async (storedSession) => {
     let activeAccessToken = storedSession.access
@@ -144,19 +341,26 @@ function App() {
   useEffect(() => {
     if (!session?.user?.username) {
       setUsernameForm(emptyUsernameForm)
+      setProfileForm(emptyProfileForm)
       setUsernameNotice(emptyNotice)
       setPasswordNotice(emptyNotice)
+      setProfileNotice(emptyNotice)
       return
     }
 
     setUsernameForm({ username: session.user.username })
-  }, [session?.user?.username])
+    setProfileForm({
+      bio: session.user.profile?.bio ?? '',
+      avatar_url: session.user.profile?.avatar_url ?? '',
+    })
+  }, [session?.user?.username, session?.user?.profile?.bio, session?.user?.profile?.avatar_url])
 
   const switchMode = (nextMode) => {
     startTransition(() => {
       setMode(nextMode)
       setStatus('')
       setForm(emptyForm)
+      setForgotEmail('')
     })
   }
 
@@ -173,6 +377,11 @@ function App() {
   const updatePasswordField = (event) => {
     const { name, value } = event.target
     setPasswordForm((currentForm) => ({ ...currentForm, [name]: value }))
+  }
+
+  const updateProfileField = (event) => {
+    const { name, value } = event.target
+    setProfileForm((currentForm) => ({ ...currentForm, [name]: value }))
   }
 
   const loadProtectedState = async (accessToken) => {
@@ -196,6 +405,7 @@ function App() {
       if (mode === 'register') {
         await registerUser({
           username: form.username,
+          email: form.email,
           password: form.password,
           confirm_password: form.confirmPassword,
         })
@@ -222,7 +432,7 @@ function App() {
       setForm(emptyForm)
 
       if (mode === 'register') {
-        setStatus(`Account created for ${user.username}. You are now signed in.`)
+        setStatus(`Account created for ${user.username}. Check your email to verify your address.`)
       }
     } catch (error) {
       setStatus(error.message)
@@ -235,32 +445,16 @@ function App() {
     }
   }
 
-  const handleRefresh = async () => {
-    if (!session?.refresh) {
-      return
-    }
-
+  const handleForgotSubmit = async (event) => {
+    event.preventDefault()
     setIsSubmitting(true)
     setStatus('')
 
     try {
-      const refreshedSession = await refreshAccessToken(session.refresh)
-      const nextSession = {
-        ...session,
-        access: refreshedSession.access,
-      }
-
-      writeStoredSession(nextSession)
-      const user = await loadProtectedState(refreshedSession.access)
-      writeStoredSession({
-        ...nextSession,
-        user,
-      })
-      setStatus('Protected data refreshed.')
+      const response = await requestPasswordReset(forgotEmail)
+      setStatus(response.message)
+      setForgotEmail('')
     } catch (error) {
-      clearStoredSession()
-      setSession(null)
-      setSecretMessage('')
       setStatus(error.message)
     } finally {
       setIsSubmitting(false)
@@ -299,6 +493,7 @@ function App() {
       setSecretMessage('')
       setPasswordForm(emptyPasswordForm)
       setUsernameForm(emptyUsernameForm)
+      setProfileForm(emptyProfileForm)
       setStatus(response.message)
     } catch (error) {
       setStatus(error.message)
@@ -368,21 +563,67 @@ function App() {
     }
   }
 
+  const handleProfileUpdate = async (event) => {
+    event.preventDefault()
+
+    if (!session?.access) {
+      return
+    }
+
+    setIsUpdatingProfile(true)
+    setStatus('')
+    setProfileNotice(emptyNotice)
+
+    try {
+      const response = await updateProfile(session.access, {
+        bio: profileForm.bio,
+        avatar_url: profileForm.avatar_url,
+      })
+      const nextSession = {
+        ...session,
+        user: response.user,
+      }
+
+      setSession(nextSession)
+      writeStoredSession(nextSession)
+      setStatus(response.message)
+      setProfileNotice({ tone: 'success', message: response.message })
+    } catch (error) {
+      setStatus(error.message)
+      setProfileNotice({ tone: 'error', message: error.message })
+    } finally {
+      setIsUpdatingProfile(false)
+    }
+  }
+
+  const emailVerified = session?.user?.profile?.email_verified
+
   return (
     <main className={`shell${session ? ' shell-authenticated' : ''}`}>
       <section className={`auth-panel${session ? ' auth-panel-authenticated' : ''}`}>
         <div className="panel-header">
           <div>
             <p className="eyebrow">Account</p>
-            <h2>{session ? 'You are signed in' : 'Login or sign up'}</h2>
-            {!session && (
+            <h2>
+              {session
+                ? 'You are signed in'
+                : mode === 'forgot'
+                  ? 'Reset your password'
+                  : 'Login or sign up'}
+            </h2>
+            {!session && mode !== 'forgot' && (
               <p className="panel-copy">
                 Create a user or log in with your existing account.
               </p>
             )}
+            {!session && mode === 'forgot' && (
+              <p className="panel-copy">
+                Enter your email address and we'll send you a reset link.
+              </p>
+            )}
           </div>
 
-          {!session && (
+          {!session && mode !== 'forgot' && (
             <div className="mode-switch" aria-label="Choose auth mode">
               <button
                 className={mode === 'login' ? 'active' : ''}
@@ -418,7 +659,15 @@ function App() {
             <article className="state-card">
               <p className="state-kicker">User</p>
               <strong>{session.user?.username}</strong>
-              <span>You are logged in successfully.</span>
+              <span>{session.user?.email}</span>
+              <span>
+                Email:{' '}
+                {emailVerified ? (
+                  <span className="badge badge-success">Verified</span>
+                ) : (
+                  <span className="badge badge-warning">Not verified — check your inbox</span>
+                )}
+              </span>
             </article>
 
             <article className="state-card accent">
@@ -498,6 +747,48 @@ function App() {
                   </p>
                 )}
               </form>
+
+              <form className="state-card settings-form" onSubmit={handleProfileUpdate}>
+                <p className="state-kicker">Profile</p>
+                <strong>Edit your profile</strong>
+                <label>
+                  Bio
+                  <input
+                    name="bio"
+                    onChange={updateProfileField}
+                    placeholder="A short bio about you"
+                    value={profileForm.bio}
+                  />
+                </label>
+                <label>
+                  Avatar URL
+                  <input
+                    name="avatar_url"
+                    onChange={updateProfileField}
+                    placeholder="https://..."
+                    type="url"
+                    value={profileForm.avatar_url}
+                  />
+                </label>
+                {profileForm.avatar_url && (
+                  <img
+                    src={profileForm.avatar_url}
+                    alt="Avatar preview"
+                    className="avatar-preview"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none'
+                    }}
+                  />
+                )}
+                <button type="submit" disabled={isUpdatingProfile}>
+                  {isUpdatingProfile ? 'Saving profile...' : 'Save profile'}
+                </button>
+                {profileNotice.message && (
+                  <p className={`form-notice ${profileNotice.tone}`}>
+                    {profileNotice.message}
+                  </p>
+                )}
+              </form>
             </div>
 
             <div className="action-row">
@@ -514,6 +805,31 @@ function App() {
               </button>
             </div>
           </div>
+        ) : mode === 'forgot' ? (
+          <form className="auth-form" onSubmit={handleForgotSubmit}>
+            <label>
+              Email
+              <input
+                autoComplete="email"
+                name="email"
+                onChange={(event) => setForgotEmail(event.target.value)}
+                placeholder="you@example.com"
+                required
+                type="email"
+                value={forgotEmail}
+              />
+            </label>
+            <button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Sending...' : 'Send reset link'}
+            </button>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => switchMode('login')}
+            >
+              Back to login
+            </button>
+          </form>
         ) : (
           <form className="auth-form" onSubmit={handleSubmit}>
             <label>
@@ -527,6 +843,21 @@ function App() {
                 value={form.username}
               />
             </label>
+
+            {mode === 'register' && (
+              <label>
+                Email
+                <input
+                  autoComplete="email"
+                  name="email"
+                  onChange={updateField}
+                  placeholder="you@example.com"
+                  required
+                  type="email"
+                  value={form.email}
+                />
+              </label>
+            )}
 
             <label>
               Password
@@ -567,6 +898,16 @@ function App() {
                   ? 'Create account'
                   : 'Login'}
             </button>
+
+            {mode === 'login' && (
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => switchMode('forgot')}
+              >
+                Forgot your password?
+              </button>
+            )}
           </form>
         )}
       </section>
