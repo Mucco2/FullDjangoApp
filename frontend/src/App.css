@@ -191,6 +191,7 @@
 
 .action-row {
   display: flex;
+  justify-content: center;
   gap: 0.9rem;
 }
 
@@ -198,6 +199,8 @@
   background: transparent;
   border: 1px solid rgba(20, 33, 61, 0.16) !important;
   color: var(--ink) !important;
+  padding: 25px 3.0rem !important;
+  margin: 0 !important;
 }
 
 @keyframes rise-in {
@@ -228,17 +231,21 @@
     padding-top: 0.5rem;
   }
 
-  .mode-switch,
-  .action-row {
+  .mode-switch {
     width: 100%;
   }
 
-  .mode-switch button,
-  .action-row button {
+  .mode-switch button {
     flex: 1;
   }
 
   .action-row {
-    flex-direction: column;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .action-row button {
+    flex: 0 0 auto;
+    width: min(100%, 11rem);
   }
 }

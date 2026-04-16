@@ -288,9 +288,6 @@ function App() {
             </article>
 
             <div className="action-row">
-              <button type="button" onClick={handleRefresh} disabled={isSubmitting}>
-                {isSubmitting ? 'Refreshing...' : 'Refresh protected data'}
-              </button>
               <button type="button" className="ghost-button" onClick={handleLogout}>
                 Log out
               </button>
