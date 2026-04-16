@@ -1,17 +1,35 @@
 import { startTransition, useEffect, useEffectEvent, useState } from 'react'
 import './App.css'
 import {
+  changePassword,
+  deleteAccount,
   fetchCurrentUser,
   fetchSecret,
   loginUser,
   refreshAccessToken,
   registerUser,
+  updateUsername,
 } from './api'
 
 const emptyForm = {
   username: '',
   password: '',
   confirmPassword: '',
+}
+
+const emptyUsernameForm = {
+  username: '',
+}
+
+const emptyPasswordForm = {
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+}
+
+const emptyNotice = {
+  tone: '',
+  message: '',
 }
 
 const storageKey = 'login-session'
@@ -47,6 +65,13 @@ function App() {
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isBooting, setIsBooting] = useState(true)
+  const [usernameForm, setUsernameForm] = useState(emptyUsernameForm)
+  const [passwordForm, setPasswordForm] = useState(emptyPasswordForm)
+  const [isUpdatingUsername, setIsUpdatingUsername] = useState(false)
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [usernameNotice, setUsernameNotice] = useState(emptyNotice)
+  const [passwordNotice, setPasswordNotice] = useState(emptyNotice)
 
   const hydrateSession = useEffectEvent(async (storedSession) => {
     let activeAccessToken = storedSession.access
@@ -116,6 +141,17 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!session?.user?.username) {
+      setUsernameForm(emptyUsernameForm)
+      setUsernameNotice(emptyNotice)
+      setPasswordNotice(emptyNotice)
+      return
+    }
+
+    setUsernameForm({ username: session.user.username })
+  }, [session?.user?.username])
+
   const switchMode = (nextMode) => {
     startTransition(() => {
       setMode(nextMode)
@@ -127,6 +163,16 @@ function App() {
   const updateField = (event) => {
     const { name, value } = event.target
     setForm((currentForm) => ({ ...currentForm, [name]: value }))
+  }
+
+  const updateUsernameField = (event) => {
+    const { name, value } = event.target
+    setUsernameForm((currentForm) => ({ ...currentForm, [name]: value }))
+  }
+
+  const updatePasswordField = (event) => {
+    const { name, value } = event.target
+    setPasswordForm((currentForm) => ({ ...currentForm, [name]: value }))
   }
 
   const loadProtectedState = async (accessToken) => {
@@ -228,9 +274,103 @@ function App() {
     setStatus('Session cleared.')
   }
 
+  const handleDeleteAccount = async () => {
+    if (!session?.access || isDeletingAccount) {
+      return
+    }
+
+    const shouldDelete = window.confirm(
+      'Delete your account permanently? This cannot be undone.'
+    )
+
+    if (!shouldDelete) {
+      return
+    }
+
+    setIsDeletingAccount(true)
+    setStatus('')
+    setUsernameNotice(emptyNotice)
+    setPasswordNotice(emptyNotice)
+
+    try {
+      const response = await deleteAccount(session.access)
+      clearStoredSession()
+      setSession(null)
+      setSecretMessage('')
+      setPasswordForm(emptyPasswordForm)
+      setUsernameForm(emptyUsernameForm)
+      setStatus(response.message)
+    } catch (error) {
+      setStatus(error.message)
+    } finally {
+      setIsDeletingAccount(false)
+    }
+  }
+
+  const handleUsernameUpdate = async (event) => {
+    event.preventDefault()
+
+    if (!session?.access) {
+      return
+    }
+
+    setIsUpdatingUsername(true)
+    setStatus('')
+    setUsernameNotice(emptyNotice)
+
+    try {
+      const response = await updateUsername(session.access, {
+        username: usernameForm.username,
+      })
+      const nextSession = {
+        ...session,
+        user: response.user,
+      }
+
+      setSession(nextSession)
+      writeStoredSession(nextSession)
+      setStatus(response.message)
+      setUsernameNotice({ tone: 'success', message: response.message })
+    } catch (error) {
+      setStatus(error.message)
+      setUsernameNotice({ tone: 'error', message: error.message })
+    } finally {
+      setIsUpdatingUsername(false)
+    }
+  }
+
+  const handlePasswordUpdate = async (event) => {
+    event.preventDefault()
+
+    if (!session?.access) {
+      return
+    }
+
+    setIsUpdatingPassword(true)
+    setStatus('')
+    setPasswordNotice(emptyNotice)
+
+    try {
+      const response = await changePassword(session.access, {
+        current_password: passwordForm.currentPassword,
+        new_password: passwordForm.newPassword,
+        confirm_password: passwordForm.confirmPassword,
+      })
+
+      setPasswordForm(emptyPasswordForm)
+      setStatus(response.message)
+      setPasswordNotice({ tone: 'success', message: response.message })
+    } catch (error) {
+      setStatus(error.message)
+      setPasswordNotice({ tone: 'error', message: error.message })
+    } finally {
+      setIsUpdatingPassword(false)
+    }
+  }
+
   return (
-    <main className="shell">
-      <section className="auth-panel">
+    <main className={`shell${session ? ' shell-authenticated' : ''}`}>
+      <section className={`auth-panel${session ? ' auth-panel-authenticated' : ''}`}>
         <div className="panel-header">
           <div>
             <p className="eyebrow">Account</p>
@@ -287,9 +427,90 @@ function App() {
               <span>Your login token is working.</span>
             </article>
 
+            <div className="settings-grid">
+              <form className="state-card settings-form" onSubmit={handleUsernameUpdate}>
+                <p className="state-kicker">Username</p>
+                <strong>Change your username</strong>
+                <label>
+                  New username
+                  <input
+                    autoComplete="username"
+                    name="username"
+                    onChange={updateUsernameField}
+                    required
+                    value={usernameForm.username}
+                  />
+                </label>
+                <button type="submit" disabled={isUpdatingUsername}>
+                  {isUpdatingUsername ? 'Saving username...' : 'Save username'}
+                </button>
+                {usernameNotice.message && (
+                  <p className={`form-notice ${usernameNotice.tone}`}>
+                    {usernameNotice.message}
+                  </p>
+                )}
+              </form>
+
+              <form className="state-card settings-form" onSubmit={handlePasswordUpdate}>
+                <p className="state-kicker">Password</p>
+                <strong>Change your password</strong>
+                <label>
+                  Current password
+                  <input
+                    autoComplete="current-password"
+                    name="currentPassword"
+                    onChange={updatePasswordField}
+                    required
+                    type="password"
+                    value={passwordForm.currentPassword}
+                  />
+                </label>
+                <label>
+                  New password
+                  <input
+                    autoComplete="new-password"
+                    minLength="8"
+                    name="newPassword"
+                    onChange={updatePasswordField}
+                    required
+                    type="password"
+                    value={passwordForm.newPassword}
+                  />
+                </label>
+                <label>
+                  Confirm new password
+                  <input
+                    autoComplete="new-password"
+                    minLength="8"
+                    name="confirmPassword"
+                    onChange={updatePasswordField}
+                    required
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                  />
+                </label>
+                <button type="submit" disabled={isUpdatingPassword}>
+                  {isUpdatingPassword ? 'Saving password...' : 'Save password'}
+                </button>
+                {passwordNotice.message && (
+                  <p className={`form-notice ${passwordNotice.tone}`}>
+                    {passwordNotice.message}
+                  </p>
+                )}
+              </form>
+            </div>
+
             <div className="action-row">
               <button type="button" className="ghost-button" onClick={handleLogout}>
                 Log out
+              </button>
+              <button
+                type="button"
+                className="danger-button"
+                disabled={isDeletingAccount}
+                onClick={handleDeleteAccount}
+              >
+                {isDeletingAccount ? 'Deleting account...' : 'Delete account'}
               </button>
             </div>
           </div>

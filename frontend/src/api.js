@@ -27,12 +27,14 @@ function getErrorMessage(payload, fallbackMessage) {
 }
 
 async function request(path, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers ?? {}),
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
-    },
     ...options,
+    headers,
   })
 
   const payload = await response.json().catch(() => null)
@@ -75,6 +77,35 @@ export function fetchCurrentUser(accessToken) {
 
 export function fetchSecret(accessToken) {
   return request('/api/secret/', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+}
+
+export function updateUsername(accessToken, payload) {
+  return request('/api/account/username/', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function changePassword(accessToken, payload) {
+  return request('/api/account/password/', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteAccount(accessToken) {
+  return request('/api/account/', {
+    method: 'DELETE',
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
