@@ -501,7 +501,7 @@ function App() {
             </div>
 
             <div className="action-row">
-              <button type="button" className="ghost-button" onClick={handleLogout}>
+              <button type="button" className="danger-button logout-button" onClick={handleLogout}>
                 Log out
               </button>
               <button
