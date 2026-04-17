@@ -35,7 +35,24 @@ const emptyPasswordForm = {
 const emptyProfileForm = {
   bio: '',
   avatar_url: '',
+  industry: '',
 }
+
+const industryOptions = [
+  { value: '', label: 'Not specified' },
+  { value: 'tech', label: 'Technology / IT' },
+  { value: 'finance', label: 'Finance / Banking' },
+  { value: 'healthcare', label: 'Healthcare' },
+  { value: 'education', label: 'Education' },
+  { value: 'retail', label: 'Retail / E-commerce' },
+  { value: 'manufacturing', label: 'Manufacturing' },
+  { value: 'construction', label: 'Construction' },
+  { value: 'hospitality', label: 'Hospitality / Travel' },
+  { value: 'media', label: 'Media / Entertainment' },
+  { value: 'government', label: 'Government / Public sector' },
+  { value: 'nonprofit', label: 'Non-profit' },
+  { value: 'other', label: 'Other' },
+]
 
 const emptyResetForm = {
   newPassword: '',
@@ -352,8 +369,14 @@ function MainApp() {
     setProfileForm({
       bio: session.user.profile?.bio ?? '',
       avatar_url: session.user.profile?.avatar_url ?? '',
+      industry: session.user.profile?.industry ?? '',
     })
-  }, [session?.user?.username, session?.user?.profile?.bio, session?.user?.profile?.avatar_url])
+  }, [
+    session?.user?.username,
+    session?.user?.profile?.bio,
+    session?.user?.profile?.avatar_url,
+    session?.user?.profile?.industry,
+  ])
 
   const switchMode = (nextMode) => {
     startTransition(() => {
@@ -578,6 +601,7 @@ function MainApp() {
       const response = await updateProfile(session.access, {
         bio: profileForm.bio,
         avatar_url: profileForm.avatar_url,
+        industry: profileForm.industry,
       })
       const nextSession = {
         ...session,
@@ -597,6 +621,8 @@ function MainApp() {
   }
 
   const emailVerified = session?.user?.profile?.email_verified
+  const headerAvatar = session?.user?.profile?.avatar_url
+  const usernameInitial = session?.user?.username?.[0]?.toUpperCase() ?? '?'
 
   return (
     <main className={`shell${session ? ' shell-authenticated' : ''}`}>
@@ -656,18 +682,33 @@ function MainApp() {
           </div>
         ) : session ? (
           <div className="dashboard">
-            <article className="state-card">
-              <p className="state-kicker">User</p>
-              <strong>{session.user?.username}</strong>
-              <span>{session.user?.email}</span>
-              <span>
-                Email:{' '}
-                {emailVerified ? (
-                  <span className="badge badge-success">Verified</span>
+            <article className="state-card user-card">
+              <div className="user-card-avatar">
+                {headerAvatar ? (
+                  <img
+                    src={headerAvatar}
+                    alt={`${session.user?.username} avatar`}
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none'
+                    }}
+                  />
                 ) : (
-                  <span className="badge badge-warning">Not verified — check your inbox</span>
+                  <span className="avatar-fallback">{usernameInitial}</span>
                 )}
-              </span>
+              </div>
+              <div className="user-card-info">
+                <p className="state-kicker">User</p>
+                <strong>{session.user?.username}</strong>
+                <span>{session.user?.email}</span>
+                <span>
+                  Email:{' '}
+                  {emailVerified ? (
+                    <span className="badge badge-success">Verified</span>
+                  ) : (
+                    <span className="badge badge-warning">Not verified — check your inbox</span>
+                  )}
+                </span>
+              </div>
             </article>
 
             <article className="state-card accent">
@@ -788,6 +829,34 @@ function MainApp() {
                     {profileNotice.message}
                   </p>
                 )}
+              </form>
+
+              <form className="state-card settings-form" onSubmit={handleProfileUpdate}>
+                <p className="state-kicker">Industry</p>
+                <strong>Your work industry</strong>
+                <label>
+                  Select your industry
+                  <select
+                    name="industry"
+                    onChange={updateProfileField}
+                    value={profileForm.industry}
+                  >
+                    {industryOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {session.user?.profile?.industry_display && profileForm.industry && (
+                  <span>
+                    Currently listed as:{' '}
+                    <strong>{session.user.profile.industry_display}</strong>
+                  </span>
+                )}
+                <button type="submit" disabled={isUpdatingProfile}>
+                  {isUpdatingProfile ? 'Saving industry...' : 'Save industry'}
+                </button>
               </form>
             </div>
 

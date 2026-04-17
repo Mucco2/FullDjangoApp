@@ -6,10 +6,30 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
+INDUSTRY_CHOICES = [
+    ('', 'Not specified'),
+    ('tech', 'Technology / IT'),
+    ('finance', 'Finance / Banking'),
+    ('healthcare', 'Healthcare'),
+    ('education', 'Education'),
+    ('retail', 'Retail / E-commerce'),
+    ('manufacturing', 'Manufacturing'),
+    ('construction', 'Construction'),
+    ('hospitality', 'Hospitality / Travel'),
+    ('media', 'Media / Entertainment'),
+    ('government', 'Government / Public sector'),
+    ('nonprofit', 'Non-profit'),
+    ('other', 'Other'),
+]
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     bio = models.TextField(blank=True, default='')
     avatar_url = models.URLField(blank=True, default='')
+    industry = models.CharField(
+        max_length=32, choices=INDUSTRY_CHOICES, blank=True, default=''
+    )
     email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

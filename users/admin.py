@@ -8,7 +8,7 @@ from .models import EmailVerificationToken, PasswordResetToken, Profile
 class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
-    fields = ['bio', 'avatar_url', 'email_verified']
+    fields = ['bio', 'avatar_url', 'industry', 'email_verified']
 
 
 class CustomUserAdmin(UserAdmin):

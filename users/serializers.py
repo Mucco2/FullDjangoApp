@@ -6,9 +6,19 @@ from .models import Profile
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    industry_display = serializers.CharField(source='get_industry_display', read_only=True)
+
     class Meta:
         model = Profile
-        fields = ['bio', 'avatar_url', 'email_verified', 'created_at', 'updated_at']
+        fields = [
+            'bio',
+            'avatar_url',
+            'industry',
+            'industry_display',
+            'email_verified',
+            'created_at',
+            'updated_at',
+        ]
         read_only_fields = ['email_verified', 'created_at', 'updated_at']
 
 
@@ -108,7 +118,7 @@ class ChangePasswordSerializer(serializers.Serializer):
 class UpdateProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['bio', 'avatar_url']
+        fields = ['bio', 'avatar_url', 'industry']
 
 
 class RequestPasswordResetSerializer(serializers.Serializer):
