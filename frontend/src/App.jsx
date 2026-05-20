@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useEffectEvent, useState } from 'react'
+import { startTransition, useCallback, useEffect, useEffectEvent, useState } from 'react'
 import './App.css'
 import {
   changePassword,
@@ -12,6 +12,8 @@ import {
   updateProfile,
   updateUsername,
 } from './api'
+import AdminDashboard from './components/admin/AdminDashboard'
+import AdminLogin from './components/admin/AdminLogin'
 import AccountDashboard from './components/account/AccountDashboard'
 import AuthShell from './components/auth/AuthShell'
 import ForgotPasswordForm from './components/auth/ForgotPasswordForm'
@@ -81,6 +83,16 @@ function clearStoredSession() {
 
 function detectRoute() {
   const path = window.location.pathname
+  const normalizedPath = path.replace(/\/+$/, '') || '/'
+
+  if (normalizedPath === '/admin/login') {
+    return { name: 'admin-login' }
+  }
+
+  if (normalizedPath === '/admin') {
+    return { name: 'admin' }
+  }
+
   const resetMatch = path.match(/^\/reset-password\/([^/]+)\/?$/)
 
   if (resetMatch) {
@@ -103,6 +115,16 @@ function navigateHome() {
 function App() {
   const [route, setRoute] = useState(detectRoute)
 
+  const navigateAdmin = useCallback(() => {
+    window.history.replaceState({}, '', '/admin')
+    setRoute({ name: 'admin' })
+  }, [])
+
+  const navigateAdminLogin = useCallback(() => {
+    window.history.replaceState({}, '', '/admin/login')
+    setRoute({ name: 'admin-login' })
+  }, [])
+
   if (route.name === 'reset') {
     return (
       <ResetPasswordPage
@@ -123,6 +145,19 @@ function App() {
           navigateHome()
           setRoute({ name: 'default' })
         }}
+      />
+    )
+  }
+
+  if (route.name === 'admin-login') {
+    return <AdminLogin onLogin={navigateAdmin} />
+  }
+
+  if (route.name === 'admin') {
+    return (
+      <AdminDashboard
+        onLogout={navigateAdminLogin}
+        onRequireLogin={navigateAdminLogin}
       />
     )
   }
@@ -213,7 +248,7 @@ function MainApp() {
     return () => {
       isCancelled = true
     }
-  }, [hydrateSession])
+  }, [])
 
   useEffect(() => {
     if (!isBooting) {

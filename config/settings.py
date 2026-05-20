@@ -1,25 +1,31 @@
-import os
+from datetime import timedelta
 from pathlib import Path
 
-from dotenv import load_dotenv
+from decouple import AutoConfig, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env file
-load_dotenv(BASE_DIR / '.env')
+config = AutoConfig(search_path=BASE_DIR)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-h-+jd3h+1i(q%ze4fo8-(a#@-r#)ggz#(un%eo3ln5+f_w!7&u'
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default='django-insecure-change-me',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='127.0.0.1,localhost',
+    cast=Csv(),
+)
 
 
 # Application definition
@@ -70,17 +76,23 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+default_database_options = {
+    'driver': config('DB_DRIVER', default='ODBC Driver 17 for SQL Server'),
+}
+
+if config('DB_TRUSTED_CONNECTION', default=True, cast=bool):
+    default_database_options['trusted_connection'] = 'yes'
+
 DATABASES = {
     'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'LoginApp',
-        'HOST': r'(localdb)\MSSQLLocalDB',
-        'PORT': '',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'trusted_connection': 'yes',
-        },
-    }
+        'ENGINE': config('DB_ENGINE', default='mssql'),
+        'NAME': config('DB_NAME', default='LoginApp'),
+        'HOST': config('DB_HOST', default=r'(localdb)\MSSQLLocalDB'),
+        'PORT': config('DB_PORT', default=''),
+        'USER': config('DB_USER', default=''),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'OPTIONS': default_database_options,
+    },
 }
 
 
@@ -120,28 +132,39 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+THIRD_PARTY_API_KEY = config('THIRD_PARTY_API_KEY', default='')
+
 # Email — sends real emails via Gmail SMTP. Credentials are loaded from .env.
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@myapp.com')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@myapp.com')
 
 # Base URL of your frontend — used when building password-reset and verify-email links.
-FRONTEND_URL = 'http://localhost:5174'
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5174',
-]
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:5173,http://127.0.0.1:5173',
+    cast=Csv(),
+)
 
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'SIGNING_KEY': config('JWT_SIGNING_KEY', default=SECRET_KEY),
+    'ACCESS_TOKEN_LIFETIME': timedelta(
+        minutes=config('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=5, cast=int)
+    ),
+    'REFRESH_TOKEN_LIFETIME': timedelta(
+        days=config('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=1, cast=int)
     ),
 }

@@ -1,7 +1,60 @@
-POST http://127.0.0.1:8000/api/token/
+@baseUrl = http://127.0.0.1:8000
+@username = admin
+@password = ChangeMe123!
+@access = paste-access-token-here
+
+### Regular user JWT login
+POST {{baseUrl}}/api/token/
 Content-Type: application/json
 
 {
-  "username": "Mucco2635",
-  "password": "Abcd12345!"
+  "username": "{{username}}",
+  "password": "{{password}}"
 }
+
+### Admin-only JWT login
+POST {{baseUrl}}/api/admin/login/
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### List users
+GET {{baseUrl}}/api/admin/users/
+Authorization: Bearer {{access}}
+
+### Get one user
+GET {{baseUrl}}/api/admin/users/1/
+Authorization: Bearer {{access}}
+
+### Patch one user
+PATCH {{baseUrl}}/api/admin/users/1/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "email": "updated@example.com",
+  "first_name": "Updated",
+  "is_active": true
+}
+
+### Replace one user
+PUT {{baseUrl}}/api/admin/users/1/
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "username": "updated_admin",
+  "email": "updated@example.com",
+  "first_name": "Updated",
+  "last_name": "Admin",
+  "is_active": true,
+  "is_staff": true,
+  "is_superuser": false
+}
+
+### Delete one user
+DELETE {{baseUrl}}/api/admin/users/2/
+Authorization: Bearer {{access}}

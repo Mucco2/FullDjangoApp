@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from .views import (
     change_password_view,
@@ -14,6 +14,9 @@ from .views import (
 )
 
 urlpatterns = [
+    # Admin API
+    path('admin/', include('users.admin_urls')),
+
     # Auth / info
     path('secret/', secret_view),
     path('me/', me_view),
