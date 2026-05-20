@@ -80,6 +80,14 @@ DB_TRUSTED_CONNECTION=True
 JWT_SIGNING_KEY=replace-with-a-separate-jwt-signing-key-or-use-secret-key
 JWT_ACCESS_TOKEN_LIFETIME_MINUTES=5
 JWT_REFRESH_TOKEN_LIFETIME_DAYS=1
+
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+EMAIL_HOST_USER=your-email@example.com
+EMAIL_HOST_PASSWORD=your-email-app-password
+DEFAULT_FROM_EMAIL=your-email@example.com
 ```
 
 ## Frontend variables

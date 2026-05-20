@@ -12,6 +12,17 @@ Content-Type: application/json
   "password": "{{password}}"
 }
 
+### Register and receive JWT tokens
+POST {{baseUrl}}/api/register/
+Content-Type: application/json
+
+{
+  "username": "newuser{{$timestamp}}",
+  "email": "newuser{{$timestamp}}@example.com",
+  "password": "ChangeMe123!",
+  "confirm_password": "ChangeMe123!"
+}
+
 ### Admin-only JWT login
 POST {{baseUrl}}/api/admin/login/
 Content-Type: application/json

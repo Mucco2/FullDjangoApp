@@ -384,16 +384,11 @@ function MainApp() {
     setStatus('')
 
     try {
-      await registerUser({
+      const tokenData = await registerUser({
         username: registerForm.username,
         email: registerForm.email,
         password: registerForm.password,
         confirm_password: registerForm.confirmPassword,
-      })
-
-      const tokenData = await loginUser({
-        username: registerForm.username,
-        password: registerForm.password,
       })
 
       await completeLogin(

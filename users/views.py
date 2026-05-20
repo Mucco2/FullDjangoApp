@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import EmailVerificationToken, PasswordResetToken
 from .serializers import (
@@ -21,6 +22,16 @@ from .serializers import (
 )
 
 PASSWORD_RESET_EXPIRY_HOURS = 1
+
+
+def build_auth_payload(user):
+    refresh = RefreshToken.for_user(user)
+
+    return {
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': UserSerializer(user).data,
+    }
 
 
 @api_view(['GET'])
@@ -103,7 +114,7 @@ def register_view(request):
     return Response(
         {
             'message': 'Account created. Check your email to verify your address.',
-            'user': UserSerializer(user).data,
+            **build_auth_payload(user),
         },
         status=status.HTTP_201_CREATED,
     )
