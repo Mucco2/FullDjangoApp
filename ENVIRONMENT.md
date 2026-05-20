@@ -65,8 +65,8 @@ git commit -m "Stop tracking local environment files"
 SECRET_KEY=django-insecure-replace-with-your-own-secret-key
 DEBUG=True
 ALLOWED_HOSTS=127.0.0.1,localhost
-FRONTEND_URL=http://localhost:5173
-CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+FRONTEND_URL=http://localhost:5174
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174
 
 DB_ENGINE=mssql
 DB_NAME=your_database_name
